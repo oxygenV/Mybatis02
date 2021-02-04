@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.EmpMapper">
+    <cache type="org.mybatis.caches.ehcache.EhcacheCache"/>
+
+<!--    function A-->
+<!--    <resultMap id="EmpResultMap" type="com.example.entity.Emp">-->
+<!--        property是实体类字段-->
+<!--        property是实体类字段-->
+<!--        property是实体类字段-->
+<!--        column是数据库字段-->
+<!--        column是数据库字段-->
+<!--        column是数据库字段-->
+<!--        将每一个属性和列名一一对应，如果有对象的引用，就写成引用对象.属性名-->
+<!--        <id property="empno" column="empno"></id>-->
+<!--        <result property="ename" column="ename"></result>-->
+<!--        <result property="job" column="job"></result>-->
+<!--        <result property="mgr" column="mgr"></result>-->
+<!--        <result property="hiredate" column="hiredate"></result>-->
+<!--        <result property="sal" column="sal"></result>-->
+<!--        <result property="comm" column="comm"></result>-->
+<!--        <result property="dept.deptno" column="deptno"></result>-->
+<!--        <result property="dept.dname" column="dname"></result>-->
+<!--        <result property="dept.loc" column="loc"></result>-->
+
+<!--    function B-->
+    <resultMap id="EmpResultMap" type="com.example.entity.Emp">
+        <id property="empno" column="empno"></id>
+        <result property="ename" column="ename"></result>
+        <result property="job" column="job"></result>
+        <result property="mgr" column="mgr"></result>
+        <result property="hiredate" column="hiredate"></result>
+        <result property="sal" column="sal"></result>
+        <result property="comm" column="comm"></result>
+        <association property="dept" javaType="com.example.entity.Dept">
+            <id property="deptno" column="deptno"></id>
+            <result property="dname" column="dname"></result>
+            <result property="loc" column="loc"></result>
+        </association>
+    </resultMap>
+   <select id="selEmpByEmpNo" resultMap="EmpResultMap">
+       select * from emp left join dept on emp.deptno=dept.deptno where empno=#{empno};
+   </select>
+<!--    分步查询 数据量-->
+    <select id="selectEmpByStep" resultMap="ResultMap">
+        select * from emp where empno=#{empno}
+    </select>
+    <resultMap id="ResultMap" type="com.example.entity.Emp">
+        <id property="empno" column="empno"></id>
+        <result property="ename" column="ename"></result>
+        <result property="job" column="job"></result>
+        <result property="mgr" column="mgr"></result>
+        <result property="hiredate" column="hiredate"></result>
+        <result property="sal" column="sal"></result>
+        <result property="comm" column="comm"></result>
+        <association property="dept" select="com.example.mapper.DeptMapper.selectDeptByStep" column="deptno"></association>
+    </resultMap>
+    <select id="selectEmpByStep2" resultType="com.example.entity.Emp">
+        select * from emp where deptno=#{deptno}
+    </select>
+<!--    动态SQL IF  WHERE 在where下 and后条件若为null and会自动去除-->
+<!--             and需要写在前面-->
+<!--    <select id="selectEmpByCondition" resultType="Emp">-->
+<!--        select * from emp-->
+<!--        <where>-->
+<!--        <if test="empno!=null">-->
+<!--            empno=#{empno}-->
+<!--        </if>-->
+<!--        <if test="ename!=null">-->
+<!--            and ename=#{ename}-->
+<!--        </if>-->
+<!--        <if test="sal&gt;500">-->
+<!--            and sal > #{sal}-->
+<!--        </if>-->
+<!--        </where>-->
+<!--    </select>-->
+
+
+<!--    动态SQL choose when  otherwise 相当于switch 匹配一个进行执行-->
+<!--    <select id="selectEmpByCondition" resultType="Emp">-->
+<!--        select * from emp-->
+<!--        <where>-->
+<!--            <choose>-->
+<!--                <when test="empno!=null">-->
+<!--                    empno=#{empno}-->
+<!--                </when>-->
+<!--                <when test="ename!=null">-->
+<!--                    ename=#{ename}-->
+<!--                </when>-->
+<!--                <otherwise>-->
+<!--                    1=1-->
+<!--                </otherwise>-->
+<!--            </choose>-->
+<!--        </where>-->
+<!--    </select>-->
+
+
+
+<!--
+    trim 截取字符串 (eg 自定义where)
+    prefix  为SQL整体添加一个前缀
+    prefixOverrides 去除SQL语句前面多余的and
+    suffixOverrides 去除SQL语句后面多余的and
+-->
+    <select id="selectEmpByCondition" resultType="Emp">
+        select * from emp
+        <trim  prefix="where" prefixOverrides="and" suffixOverrides="and|or">
+                <if test="empno!=null">
+                    empno=#{empno} and
+                </if>
+                <if test="ename!=null">
+                      ename=#{ename} or
+                </if>
+        </trim>
+    </select>
+<!--
+    foreach 遍历条件
+        collection 集合
+        open 以什么开始
+        close 以什么结束
+        index 索引
+        separator 分隔符
+        item 具体值 写在条件里 eg #{deptno}
+-->
+    <select id="getEmpByDeptnos" resultType="Emp">
+        select * from emp where deptno in
+        <foreach collection="deptnos" close=")" index="numbers" separator="," item="deptno" open="(">
+            #{deptno}
+        </foreach>
+    </select>
+
+<!--
+   mybatis缓存：
+        添加缓存：每次查询数据，先查缓存，如果没有，再查数据库
+    一级缓存：sqlsession级别，每次查询开启一个会话，会话关闭缓存失效
+    二级缓存：全局缓存，sqlsession关闭后生效
+    第三方缓存：继承第三方组件
+ ++++++++++++++++
+    一级缓存：数据存储在sqlsession中，关闭sqlsession，自动失效，默认开启
+        (同一个会话内，同一条SQL执行两次，第二次不会查数据库，直接查缓存)
+    二级缓存：
+        1、全局配置xml文件 <setting name="cacheEnabled" value="true"/>
+        2、需要添加缓存的mapper.xml类 <cache></cache>
+        3、实体类实现序列化
+    缓存属性
+    <cache  eviction="LRU"
+            flushInterval=""
+            size=""
+            readOnly=""/>
+      eviction：清除策略
+        LRU：最近最少使用 默认的策略
+        FIFO：先进先出
+      flushInterval ： 设置多长时间刷新缓存
+      size ： 设置缓存中可以存储多少个对象
+      readOnly ：
+            false:设置为false比较安全，返回缓存对象的拷贝
+            true:返回对象的实例，不安全
+    一级缓存和二级缓存会同时存在吗？
+        不会，二级缓存使用时，sqlsession必须关闭
+    查询数据的时候，先查询一级缓存还是二级缓存？
+        二级缓存 > 一级缓存 > 数据库
+
+-->
+</mapper>
